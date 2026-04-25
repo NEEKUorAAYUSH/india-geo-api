@@ -11,7 +11,7 @@ export default function Dashboard() {
   const [view, setView] = useState<"home" | "register" | "login" | "dashboard">("home");
   const [user, setUser] = useState<User | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [token, setToken] = useState("");
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -31,7 +31,7 @@ export default function Dashboard() {
       if (!data.success) { setError(data.error); return; }
       setUser(data.data.user);
       setApiKey(data.data.apiKey);
-      setToken(data.data.token);
+      
       setView("dashboard");
     } catch {
       setError("Network error. Please try again.");
@@ -53,7 +53,7 @@ export default function Dashboard() {
       if (!data.success) { setError(data.error); return; }
       setUser(data.data.user);
       setApiKey(data.data.apiKey || "No API key found");
-      setToken(data.data.token);
+      
       setView("dashboard");
     } catch {
       setError("Network error. Please try again.");
@@ -131,7 +131,7 @@ export default function Dashboard() {
             <div style={{ textAlign: "center", padding: "60px 0 40px" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#6366f1", letterSpacing: "0.12em", marginBottom: 16, textTransform: "uppercase" }}>Production-Grade SaaS API</div>
               <h1 style={{ fontSize: "clamp(32px, 5vw, 56px)", fontWeight: 700, lineHeight: 1.15, marginBottom: 20 }}>
-                India's Complete<br />
+                India&apos;s Complete<br />
                 <span style={{ background: "linear-gradient(135deg, #6366f1, #a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                   Village Address API
                 </span>

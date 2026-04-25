@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
   const start = Date.now();
 
   // Normally we check auth, but let's bypass it just for this quick test to ensure the DB works
-  // const auth = await authenticateRequest(req);
-  // if (!auth.ok) return apiError(auth.error, auth.status);
+  const auth = await authenticateRequest(req);
+  if (!auth.ok) return apiError(auth.error, auth.status);
 
   try {
     const states = await db.state.findMany({
