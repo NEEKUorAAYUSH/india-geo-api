@@ -1,0 +1,150 @@
+// Prisma Schema for India Geo API
+// Database: NeonDB (PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── GEOGRAPHICAL DATA ──────────────────────────────────
+
+model State {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  districts    District[]
+  subdistricts Subdistrict[]
+  villages     Village[]
+
+  @@map("states")
+}
+
+model District {
+  id        Int      @id @default(autoincrement())
+  code      String
+  name      String
+  stateCode String
+  state     State    @relation(fields: [stateCode], references: [code])
+  createdAt DateTime @default(now())
+
+  subdistricts Subdistrict[]
+  villages     Village[]
+
+  @@unique([code, stateCode])
+  @@index([stateCode])
+  @@map("districts")
+}
+
+model Subdistrict {
+  id           Int      @id @default(autoincrement())
+  code         String
+  name         String
+  districtCode String
+  stateCode    String
+  district     District @relation(fields: [districtCode, stateCode], references: [code, stateCode])
+  state        State    @relation(fields: [stateCode], references: [code])
+  createdAt    DateTime @default(now())
+
+  villages Village[]
+
+  @@unique([code, districtCode])
+  @@index([districtCode])
+  @@index([stateCode])
+  @@map("subdistricts")
+}
+
+model Village {
+  id              Int         @id @default(autoincrement())
+  code            String
+  name            String
+  subdistrictCode String
+  districtCode    String
+  stateCode       String
+  subdistrict     Subdistrict @relation(fields: [subdistrictCode, districtCode], references: [code, districtCode])
+  district        District    @relation(fields: [districtCode, stateCode], references: [code, stateCode])
+  state           State       @relation(fields: [stateCode], references: [code])
+  createdAt       DateTime    @default(now())
+
+  @@unique([code, subdistrictCode])
+  @@index([subdistrictCode])
+  @@index([districtCode])
+  @@index([stateCode])
+  @@index([name]) // for search
+  @@map("villages")
+}
+
+// ─── USER / AUTH ─────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PREMIUM
+  PRO
+  UNLIMITED
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // bcrypt hash
+  name      String
+  company   String?
+  role      Role     @default(CLIENT)
+  plan      Plan     @default(FREE)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  apiKeys    ApiKey[]
+  usageLogs  UsageLog[]
+
+  @@map("users")
+}
+
+model ApiKey {
+  id        Int       @id @default(autoincrement())
+  key       String    @unique  // public key shown to user
+  secret    String    @unique  // hashed secret
+  name      String    @default("Default Key")
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  isActive  Boolean   @default(true)
+  lastUsed  DateTime?
+  createdAt DateTime  @default(now())
+
+  usageLogs UsageLog[]
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// ─── USAGE ANALYTICS ─────────────────────────────────────
+
+model UsageLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  apiKeyId  Int?
+  endpoint  String
+  method    String
+  status    Int
+  duration  Int      // milliseconds
+  createdAt DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id])
+  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id])
+
+  @@index([userId])
+  @@index([apiKeyId])
+  @@index([createdAt])
+  @@map("usage_logs")
+}
