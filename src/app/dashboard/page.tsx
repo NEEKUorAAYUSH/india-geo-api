@@ -1,289 +1,479 @@
 "use client";
-import { useState } from "react";
 
-type User = {
-  name: string;
-  email: string;
-  plan: string;
+import { useState } from "react";
+import {
+  Map,
+  Users,
+  Zap,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Shield,
+  MoreHorizontal,
+  Search,
+  Bell,
+  ChevronDown,
+  Activity,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+// ── MOCK DATA ─────────────────────────────────────────────────────────────────
+
+const requestsData = [
+  { day: "Mon", requests: 18400 },
+  { day: "Tue", requests: 22100 },
+  { day: "Wed", requests: 19800 },
+  { day: "Thu", requests: 31200 },
+  { day: "Fri", requests: 28700 },
+  { day: "Sat", requests: 14300 },
+  { day: "Sun", requests: 11900 },
+];
+
+const statesData = [
+  { state: "Uttar Pradesh", villages: 107106 },
+  { state: "Madhya Pradesh", villages: 54903 },
+  { state: "Odisha", villages: 51478 },
+  { state: "Bihar", villages: 44937 },
+  { state: "Maharashtra", villages: 43946 },
+];
+
+const users = [
+  {
+    id: 1,
+    company: "Swiggy Logistics",
+    email: "api@swiggy.in",
+    apiKey: "igapi_7e6f2c••••••••••de91",
+    plan: "Pro",
+    status: "Active",
+    requests: "298,412",
+  },
+  {
+    id: 2,
+    company: "Zomato India",
+    email: "dev@zomato.com",
+    apiKey: "igapi_3a9b1d••••••••••f204",
+    plan: "Unlimited",
+    status: "Active",
+    requests: "891,033",
+  },
+  {
+    id: 3,
+    company: "Delhivery Corp",
+    email: "tech@delhivery.com",
+    apiKey: "igapi_c2e4a8••••••••••7731",
+    plan: "Premium",
+    status: "Active",
+    requests: "44,218",
+  },
+  {
+    id: 4,
+    company: "Flipkart Commerce",
+    email: "infra@flipkart.com",
+    apiKey: "igapi_9f1c3b••••••••••a556",
+    plan: "Unlimited",
+    status: "Active",
+    requests: "1,204,891",
+  },
+  {
+    id: 5,
+    company: "Urban Company",
+    email: "backend@urbancompany.com",
+    apiKey: "igapi_5d8e2f••••••••••3bc0",
+    plan: "Free",
+    status: "Pending",
+    requests: "1,240",
+  },
+  {
+    id: 6,
+    company: "Meesho Inc",
+    email: "api@meesho.com",
+    apiKey: "igapi_b4a7c1••••••••••6d83",
+    plan: "Premium",
+    status: "Suspended",
+    requests: "12,004",
+  },
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+
+const planColors: Record<string, string> = {
+  Free: "bg-gray-100 text-gray-600",
+  Premium: "bg-blue-50 text-blue-700",
+  Pro: "bg-violet-50 text-violet-700",
+  Unlimited: "bg-amber-50 text-amber-700",
 };
 
-export default function Dashboard() {
-  const [view, setView] = useState<"home" | "register" | "login" | "dashboard">("home");
-  const [user, setUser] = useState<User | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+const statusColors: Record<string, string> = {
+  Active: "bg-emerald-50 text-emerald-700",
+  Pending: "bg-yellow-50 text-yellow-700",
+  Suspended: "bg-red-50 text-red-600",
+};
 
-  const [form, setForm] = useState({ name: "", email: "", password: "", company: "" });
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-lg text-sm">
+        <p className="text-gray-500 text-xs mb-1">{label}</p>
+        <p className="font-semibold text-gray-900">
+          {payload[0].value.toLocaleString()}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
-  const handleRegister = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!data.success) { setError(data.error); return; }
-      setUser(data.data.user);
-      setApiKey(data.data.apiKey);
-      
-      setView("dashboard");
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
 
-  const handleLogin = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      });
-      const data = await res.json();
-      if (!data.success) { setError(data.error); return; }
-      setUser(data.data.user);
-      setApiKey(data.data.apiKey || "No API key found");
-      
-      setView("dashboard");
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+export default function AdminDashboard() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
 
-  const copyKey = () => {
-    navigator.clipboard.writeText(apiKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const endpoints = [
-    { method: "GET", path: "/api/v1/states", desc: "List all Indian states", example: "/api/v1/states" },
-    { method: "GET", path: "/api/v1/districts", desc: "Districts for a state", example: "/api/v1/districts?state=27" },
-    { method: "GET", path: "/api/v1/subdistricts", desc: "Sub-districts for a district", example: "/api/v1/subdistricts?state=27&district=519" },
-    { method: "GET", path: "/api/v1/villages", desc: "Villages with formatted labels", example: "/api/v1/villages?district=519&subdistrict=06488" },
-    { method: "GET", path: "/api/v1/search", desc: "Search across all levels", example: "/api/v1/search?q=Mumbai&type=all" },
-  ];
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
+      u.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab =
+      activeTab === "all" ||
+      u.status.toLowerCase() === activeTab.toLowerCase();
+    return matchesSearch && matchesTab;
+  });
 
   return (
-    <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif", minHeight: "100vh", background: "#0a0f1e", color: "#e8eaf0" }}>
-      {/* THE ONLY FIX IS RIGHT HERE: Using dangerouslySetInnerHTML */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0a0f1e; }
-        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; padding: 12px 28px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
-        .btn-secondary { background: transparent; color: #a5b4fc; border: 1px solid #3f4568; padding: 11px 24px; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .btn-secondary:hover { border-color: #6366f1; color: #c7d2fe; }
-        .card { background: #131929; border: 1px solid #1e2a45; border-radius: 16px; padding: 28px; }
-        .input-field { width: 100%; background: #0d1526; border: 1px solid #1e2a45; border-radius: 10px; padding: 12px 16px; color: #e8eaf0; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; }
-        .input-field:focus { border-color: #6366f1; }
-        .input-field::placeholder { color: #4a5578; }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; }
-        .badge-get { background: rgba(34,197,94,0.15); color: #4ade80; }
-        .badge-post { background: rgba(251,146,60,0.15); color: #fb923c; }
-        .tag { background: rgba(99,102,241,0.15); color: #a5b4fc; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-family: 'DM Mono', monospace; }
-        .glow { box-shadow: 0 0 40px rgba(99,102,241,0.15); }
-        .link { color: #818cf8; cursor: pointer; text-decoration: underline; }
-        .link:hover { color: #a5b4fc; }
-        .api-key-box { background: #0d1526; border: 1px solid #6366f1; border-radius: 10px; padding: 14px 16px; font-family: 'DM Mono', monospace; font-size: 13px; color: #a5b4fc; word-break: break-all; }
-        .stat-card { background: #131929; border: 1px solid #1e2a45; border-radius: 12px; padding: 20px; text-align: center; }
-        .endpoint-row { background: #0d1526; border: 1px solid #1e2a45; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .nav { background: rgba(13,21,38,0.9); border-bottom: 1px solid #1e2a45; padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); }
-        .logo { font-size: 20px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 40px 0; }
-        @media (max-width: 640px) { .hero-grid { grid-template-columns: 1fr; } .nav { padding: 16px 20px; } }
-      `}} />
+    <div className="min-h-screen bg-gray-50 font-sans">
 
-      {/* NAV */}
-      <nav className="nav">
-        <div className="logo">🇮🇳 India Geo API</div>
-        <div style={{ display: "flex", gap: 12 }}>
-          {view === "home" && (
-            <>
-              <button className="btn-secondary" onClick={() => { setView("login"); setError(""); }}>Sign In</button>
-              <button className="btn-primary" onClick={() => { setView("register"); setError(""); }}>Get API Key</button>
-            </>
-          )}
-          {view === "dashboard" && (
-            <button className="btn-secondary" onClick={() => { setView("home"); setUser(null); setApiKey(""); }}>Sign Out</button>
-          )}
+      {/* ── TOP NAV ── */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <Map className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900 text-sm">India Geo API</span>
+              <span className="text-gray-300 text-xs ml-1">/</span>
+              <span className="text-gray-500 text-xs">Admin</span>
+            </div>
+            <nav className="hidden md:flex items-center gap-1">
+              {["Overview", "Users", "API Logs", "Settings"].map((item) => (
+                <button
+                  key={item}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    item === "Overview"
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="relative p-1.5 text-gray-400 hover:text-gray-600 transition-colors">
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
+            </button>
+            <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
+              <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center">
+                <span className="text-xs font-semibold text-indigo-700">A</span>
+              </div>
+              <span className="text-sm font-medium text-gray-700 hidden md:block">Admin</span>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </div>
+          </div>
         </div>
-      </nav>
+      </header>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 20px" }}>
+      <main className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* HOME */}
-        {view === "home" && (
-          <>
-            <div style={{ textAlign: "center", padding: "60px 0 40px" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#6366f1", letterSpacing: "0.12em", marginBottom: 16, textTransform: "uppercase" }}>Production-Grade SaaS API</div>
-              <h1 style={{ fontSize: "clamp(32px, 5vw, 56px)", fontWeight: 700, lineHeight: 1.15, marginBottom: 20 }}>
-                India&apos;s Complete<br />
-                <span style={{ background: "linear-gradient(135deg, #6366f1, #a78bfa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  Village Address API
-                </span>
-              </h1>
-              <p style={{ fontSize: 18, color: "#8892b0", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.7 }}>
-                Standardized geographical data for every state, district, sub-district, and village in India — ready for your dropdowns.
-              </p>
-              <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-                <button className="btn-primary" style={{ fontSize: 16, padding: "14px 36px" }} onClick={() => { setView("register"); setError(""); }}>
-                  Start Free →
-                </button>
-                <button className="btn-secondary" onClick={() => { setView("login"); setError(""); }}>Sign In</button>
+        {/* ── PAGE HEADER ── */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Platform overview · Last updated just now
+          </p>
+        </div>
+
+        {/* ── METRIC CARDS ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+          {/* Villages */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Villages</span>
+              <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
+                <Map className="w-4 h-4 text-indigo-600" />
               </div>
             </div>
-
-            <div className="hero-grid">
-              {[
-                { n: "29+", label: "States & UTs" },
-                { n: "450K+", label: "Villages" },
-                { n: "<100ms", label: "Response Time" },
-              ].map((s) => (
-                <div className="stat-card" key={s.label}>
-                  <div style={{ fontSize: 32, fontWeight: 700, color: "#a5b4fc", marginBottom: 6 }}>{s.n}</div>
-                  <div style={{ color: "#8892b0", fontSize: 14 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card glow" style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 13, color: "#6366f1", fontWeight: 600, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>API Endpoints</div>
-              {endpoints.map((ep) => (
-                <div className="endpoint-row" key={ep.path}>
-                  <span className={`badge badge-${ep.method.toLowerCase()}`}>{ep.method}</span>
-                  <code style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#c7d2fe" }}>{ep.path}</code>
-                  <span style={{ color: "#8892b0", fontSize: 13, flex: 1 }}>{ep.desc}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="card" style={{ background: "#0d1526" }}>
-              <div style={{ fontSize: 13, color: "#6366f1", fontWeight: 600, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em" }}>Example Request</div>
-              <pre style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#a5b4fc", overflowX: "auto", lineHeight: 1.8 }}>{`GET /api/v1/villages?district=519&subdistrict=06488
-x-api-key: igapi_your_key_here
-
-// Response
-{
-  "success": true,
-  "data": [{
-    "name": "Dharavi",
-    "label": "Dharavi, Kurla, Mumbai, Maharashtra, India",
-    "code": "603978"
-  }]
-}`}</pre>
-            </div>
-          </>
-        )}
-
-        {/* REGISTER */}
-        {view === "register" && (
-          <div style={{ maxWidth: 460, margin: "40px auto" }}>
-            <div className="card glow">
-              <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Create Account</h2>
-              <p style={{ color: "#8892b0", marginBottom: 28, fontSize: 15 }}>Get your free API key instantly</p>
-              {error && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", color: "#f87171", marginBottom: 20, fontSize: 14 }}>{error}</div>}
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <input className="input-field" placeholder="Full name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-                <input className="input-field" placeholder="Work email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                <input className="input-field" placeholder="Password (min 8 chars)" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-                <input className="input-field" placeholder="Company (optional)" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
-                <button className="btn-primary" style={{ width: "100%", padding: "14px", fontSize: 16 }} onClick={handleRegister} disabled={loading}>
-                  {loading ? "Creating account..." : "Create Account & Get API Key"}
-                </button>
-              </div>
-              <p style={{ marginTop: 20, color: "#8892b0", fontSize: 14, textAlign: "center" }}>
-                Already have an account? <span className="link" onClick={() => { setView("login"); setError(""); }}>Sign in</span>
-              </p>
+            <div className="text-3xl font-bold text-gray-900 tracking-tight">450K+</div>
+            <div className="flex items-center gap-1 mt-2">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs text-emerald-600 font-medium">29 states covered</span>
             </div>
           </div>
-        )}
 
-        {/* LOGIN */}
-        {view === "login" && (
-          <div style={{ maxWidth: 460, margin: "40px auto" }}>
-            <div className="card glow">
-              <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 6 }}>Sign In</h2>
-              <p style={{ color: "#8892b0", marginBottom: 28, fontSize: 15 }}>Access your API dashboard</p>
-              {error && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", color: "#f87171", marginBottom: 20, fontSize: 14 }}>{error}</div>}
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <input className="input-field" placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                <input className="input-field" placeholder="Password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-                <button className="btn-primary" style={{ width: "100%", padding: "14px", fontSize: 16 }} onClick={handleLogin} disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </button>
+          {/* Active Users */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Users</span>
+              <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-violet-600" />
               </div>
-              <p style={{ marginTop: 20, color: "#8892b0", fontSize: 14, textAlign: "center" }}>
-                No account? <span className="link" onClick={() => { setView("register"); setError(""); }}>Create one free</span>
-              </p>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 tracking-tight">1,284</div>
+            <div className="flex items-center gap-1 mt-2">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs text-emerald-600 font-medium">+12% this week</span>
             </div>
           </div>
-        )}
 
-        {/* DASHBOARD */}
-        {view === "dashboard" && user && (
-          <>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 13, color: "#6366f1", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Welcome back</div>
-              <h2 style={{ fontSize: 32, fontWeight: 700 }}>Hello, {user.name} 👋</h2>
-              <p style={{ color: "#8892b0", marginTop: 4 }}>{user.email} · <span className="tag">{user.plan}</span></p>
-            </div>
-
-            <div className="card glow" style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em" }}>Your API Key</div>
-                  <p style={{ fontSize: 13, color: "#8892b0", marginTop: 4 }}>Pass this in the <code style={{ fontFamily: "DM Mono", color: "#a5b4fc" }}>x-api-key</code> header</p>
-                </div>
-                <button className="btn-primary" style={{ padding: "8px 20px", fontSize: 14 }} onClick={copyKey}>
-                  {copied ? "✓ Copied!" : "Copy Key"}
-                </button>
+          {/* API Requests */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">API Requests Today</span>
+              <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
+                <Zap className="w-4 h-4 text-amber-600" />
               </div>
-              <div className="api-key-box">{apiKey}</div>
             </div>
-
-            <div className="card" style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>Quick Start</div>
-              <pre style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#a5b4fc", lineHeight: 1.9, overflowX: "auto", whiteSpace: "pre-wrap" }}>{`# 1. Get all states
-curl https://your-app.vercel.app/api/v1/states \\
-  -H "x-api-key: ${apiKey}"
-
-# 2. Get districts in Maharashtra (code: 27)
-curl "https://your-app.vercel.app/api/v1/districts?state=27" \\
-  -H "x-api-key: ${apiKey}"
-
-# 3. Search for any village
-curl "https://your-app.vercel.app/api/v1/search?q=Dharavi" \\
-  -H "x-api-key: ${apiKey}"`}</pre>
+            <div className="text-3xl font-bold text-gray-900 tracking-tight">2.4M</div>
+            <div className="flex items-center gap-1 mt-2">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs text-emerald-600 font-medium">+8.3% vs yesterday</span>
             </div>
+          </div>
 
-            <div className="card">
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>All Endpoints</div>
-              {endpoints.map((ep) => (
-                <div className="endpoint-row" key={ep.path}>
-                  <span className={`badge badge-get`}>GET</span>
-                  <code style={{ fontFamily: "'DM Mono', monospace", fontSize: 13, color: "#c7d2fe" }}>{ep.path}</code>
-                  <span style={{ color: "#8892b0", fontSize: 13, flex: 1 }}>{ep.desc}</span>
-                  <span className="tag">{ep.example.split("?")[1] || "no params"}</span>
-                </div>
+          {/* Response Time */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg Response Time</span>
+              <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+                <Clock className="w-4 h-4 text-emerald-600" />
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 tracking-tight">47ms</div>
+            <div className="flex items-center gap-1 mt-2">
+              <TrendingDown className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs text-emerald-600 font-medium">Well below 100ms SLA</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── CHARTS ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
+
+          {/* Line Chart — takes 3 cols */}
+          <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">API Requests</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Last 7 days</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-xs font-medium text-indigo-600">Live</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={requestsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="requests"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  dot={{ fill: "#6366f1", r: 3, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: "#6366f1", strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Bar Chart — takes 2 cols */}
+          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-900">Top States</h2>
+              <p className="text-xs text-gray-500 mt-0.5">By village count</p>
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={statesData} layout="vertical" margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="state"
+                  width={90}
+                  tick={{ fontSize: 10, fill: "#64748b" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => v.split(" ")[0]}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="villages" fill="#e0e7ff" radius={[0, 4, 4, 0]}>
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+        </div>
+
+        {/* ── USER TABLE ── */}
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">B2B Clients</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{users.length} registered companies</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search companies..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 w-48 bg-gray-50"
+                />
+              </div>
+              {/* Filter tabs */}
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                {["all", "active", "pending", "suspended"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
+                      activeTab === tab
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  {["Company", "Email", "API Key", "Plan", "Requests", "Status", ""].map((col) => (
+                    <th
+                      key={col}
+                      className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider"
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-indigo-700">
+                            {user.company[0]}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{user.company}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span className="text-sm text-gray-500">{user.email}</span>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <code className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                        {user.apiKey}
+                      </code>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${planColors[user.plan]}`}>
+                        {user.plan}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span className="text-sm text-gray-700 font-medium tabular-nums">{user.requests}</span>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${statusColors[user.status]}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          user.status === "Active" ? "bg-emerald-500" :
+                          user.status === "Pending" ? "bg-yellow-500" : "bg-red-400"
+                        }`} />
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors rounded-md hover:bg-gray-100">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filteredUsers.length === 0 && (
+              <div className="text-center py-12">
+                <Shield className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-400">No users match your filters</p>
+              </div>
+            )}
+          </div>
+
+          {/* Table footer */}
+          <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-400">
+              Showing {filteredUsers.length} of {users.length} users
+            </span>
+            <div className="flex items-center gap-1">
+              {["Previous", "Next"].map((label) => (
+                <button
+                  key={label}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {label}
+                </button>
               ))}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
